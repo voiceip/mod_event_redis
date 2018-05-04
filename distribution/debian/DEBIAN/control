@@ -1,0 +1,8 @@
+Package: freeswitch-mod-event-redis
+Version: 1._VERSION_
+Architecture: all
+Section: base
+Priority: standard
+Depends: cpp-redis, freeswitch
+Maintainer: Kinshuk Bairagi <me@kinshuk.in>
+Description: Publish FreeSwitch Event to Redis Queue

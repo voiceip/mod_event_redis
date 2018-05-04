@@ -1,0 +1,8 @@
+<configuration name="event_redis.conf" description="Redis Event Configuration">
+	<settings>
+		<param name="hostname" value="127.0.0.1"/>
+		<param name="port" value="6379"/>
+		<param name="sentinels" value=""/>
+		<param name="topic-name" value="redis-queue"/>
+	</settings>
+ </configuration>
