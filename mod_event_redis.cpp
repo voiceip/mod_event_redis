@@ -69,7 +69,7 @@ namespace mod_event_redis {
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Could not open event_redis.conf\n");
             return SWITCH_STATUS_FALSE;
         } else {
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "event_redis.conf loaded [hostname: %s, port : %d, topic: %s]", globals.hostname, globals.port , globals.topic_name);
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "event_redis.conf loaded [hostname: %s, port : %d, topic: %s]  \n", globals.hostname, globals.port , globals.topic_name);
         }
         return SWITCH_STATUS_SUCCESS;
     }
@@ -101,7 +101,7 @@ namespace mod_event_redis {
         public:
         RedisEventPublisher(){
 
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "RedisEventPublisher Initialising...");
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "RedisEventPublisher Initialising... \n");
 
             load_config(SWITCH_FALSE);
 
@@ -110,16 +110,16 @@ namespace mod_event_redis {
             try {
                 redisClient.connect(globals.hostname, globals.port, [this](const std::string& host, std::size_t port, cpp_redis::client::connect_state status) {
                     if (status == cpp_redis::client::connect_state::ok) {
-                        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "client connection ok to %s:%zu ", host.c_str(), port);
+                        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "client connection ok to %s:%zu  \n", host.c_str(), port);
                         _initialized = 1;
                     } else if (status == cpp_redis::client::connect_state::dropped) {
-                        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "client disconnected from %s:%zu ", host.c_str(), port);
+                        switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "client disconnected from %s:%zu  \n", host.c_str(), port);
                         _initialized = 0;
                     }
                 }, 0, -1, 5000);
                 _initialized = 1;
             } catch (...) {
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Redis Connection Initial Connect Failed ");
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Redis Connection Initial Connect Failed  \n");
             }
 
         }
@@ -133,8 +133,8 @@ namespace mod_event_redis {
             if(_initialized){
                 send(event_json_str);
             } else {
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "PublishEvent without active RedisConnection");
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, event_json);
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "PublishEvent without active RedisConnection \n");
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "%s\n", event_json );
             }
         }
 
@@ -144,7 +144,7 @@ namespace mod_event_redis {
         }
 
         ~RedisEventPublisher(){
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "RedisEventPublisher Destroyed");
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "RedisEventPublisher Destroyed \n");
         }
 
         private:
@@ -166,7 +166,7 @@ namespace mod_event_redis {
             size_t len = data.size();
 
             redisClient.lpush(globals.topic_name, lpushData , [len](cpp_redis::reply& reply) {
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG,"Published messaged (%zu bytes), redis queue size (%" PRId64 ") messages.", len ,reply.as_integer());
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG,"Published messaged (%zu bytes), redis queue size (%" PRId64 ") messages.  \n", len ,reply.as_integer());
                 // if (reply.is_string())
                 //   do_something_with_string(reply.as_string())
             });
@@ -220,10 +220,10 @@ namespace mod_event_redis {
                 RedisEventPublisher *publisher = static_cast<RedisEventPublisher*>(event->bind_user_data);
                 publisher->PublishEvent(event);
             } catch (std::exception ex) {
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "Error publishing event via 0MQ: %s\n",
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "Error publishing event via Redis: %s\n",
                                   ex.what());
             } catch (...) { // Exceptions must not propogate to C caller
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "Unknown error publishing event via 0MQ\n");
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "Unknown error publishing event via Redis\n");
             }
         }
 
