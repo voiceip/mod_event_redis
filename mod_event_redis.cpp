@@ -111,9 +111,10 @@ namespace mod_event_redis {
                 redisClient.connect(globals.hostname, globals.port, [this](const std::string& host, std::size_t port, cpp_redis::client::connect_state status) {
                     if (status == cpp_redis::client::connect_state::ok) {
                         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "client connection ok to %s:%zu ", host.c_str(), port);
+                        _initialized = 1;
                     } else if (status == cpp_redis::client::connect_state::dropped) {
                         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "client disconnected from %s:%zu ", host.c_str(), port);
-                        // _initialized = 0;
+                        _initialized = 0;
                     }
                 }, 0, -1, 5000);
                 _initialized = 1;
@@ -129,11 +130,8 @@ namespace mod_event_redis {
             switch_event_serialize_json(event, &event_json);
             std::string event_json_str(event_json);
 
-            if(_initialized && redisClient.is_connected()){
+            if(_initialized){
                 send(event_json_str);
-            } else if (_initialized){
-                send(event_json_str);
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "Enqueued Locally, Connection Error ?? (%zu bytes)", event_json_str.size());
             } else {
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "PublishEvent without active RedisConnection");
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, event_json);
