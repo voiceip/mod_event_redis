@@ -57,8 +57,8 @@ namespace mod_event_redis {
                             6379, NULL, "hosts", "Redis Port"),
         SWITCH_CONFIG_ITEM("sentinals", SWITCH_CONFIG_STRING, CONFIG_RELOADABLE, &globals.sentinals,
                             "localhost:xxxx", NULL, "hostname", "Redis Sentinals"),
-        SWITCH_CONFIG_ITEM("topic-name", SWITCH_CONFIG_STRING, CONFIG_RELOADABLE, &globals.topic_name,
-                            "fs", NULL, "topic-name", "Topic Name"),
+        SWITCH_CONFIG_ITEM("topic-prefix", SWITCH_CONFIG_STRING, CONFIG_RELOADABLE, &globals.topic_prefix,
+                            "fs", NULL, "topic-prefix", "Topic Prefix"),
         SWITCH_CONFIG_ITEM_END()
     };
 
@@ -69,7 +69,7 @@ namespace mod_event_redis {
             switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_CRIT, "Could not open event_redis.conf\n");
             return SWITCH_STATUS_FALSE;
         } else {
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "event_redis.conf loaded [hostname: %s, port : %d, topic: %s]  \n", globals.hostname, globals.port , globals.topic_name);
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "event_redis.conf loaded [hostname: %s, port : %d, topic_prefix: %s]  \n", globals.hostname, globals.port , globals.topic_prefix);
         }
         return SWITCH_STATUS_SUCCESS;
     }
@@ -106,6 +106,9 @@ namespace mod_event_redis {
             load_config(SWITCH_FALSE);
 
             cpp_redis::active_logger = std::unique_ptr<cpp_redis_fs_logger>(new cpp_redis_fs_logger);
+
+            topic_str = std::string(globals.topic_prefix) + "_" + std::string(switch_core_get_switchname());
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "KafkaEventPublisher Topic : %s", topic_str.c_str());
 
             try {
                 redisClient.connect(globals.hostname, globals.port, [this](const std::string& host, std::size_t port, cpp_redis::client::connect_state status) {
@@ -165,7 +168,7 @@ namespace mod_event_redis {
             std::vector<std::string> lpushData = {data};
             size_t len = data.size();
 
-            redisClient.lpush(globals.topic_name, lpushData , [len](cpp_redis::reply& reply) {
+            redisClient.lpush(topic_str, lpushData , [len](cpp_redis::reply& reply) {
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_DEBUG,"Published messaged (%zu bytes), redis queue size (%" PRId64 ") messages.  \n", len ,reply.as_integer());
                 // if (reply.is_string())
                 //   do_something_with_string(reply.as_string())
@@ -175,6 +178,7 @@ namespace mod_event_redis {
             return 0;    
         }   
 
+        std::string topic_str;
         bool _initialized = 0;
         cpp_redis::client redisClient;
     };

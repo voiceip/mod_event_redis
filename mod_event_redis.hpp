@@ -8,7 +8,7 @@ namespace mod_event_redis {
 		char *hostname;
 		int port;
 		char *sentinals;
-		char *topic_name;
+		char *topic_prefix;
 	} globals;
 
 	SWITCH_MODULE_LOAD_FUNCTION(mod_event_redis_load);
