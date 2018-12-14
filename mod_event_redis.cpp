@@ -28,7 +28,7 @@
  * 
  * Kinshuk Bairagi <me@kinshuk.in>
  *
- * mod_event_redis.c -- Sends FreeSWITCH events to an Redis Queue
+ * mod_event_redis.cpp -- Sends FreeSWITCH events to an Redis Queue
  *
  */
 
@@ -37,6 +37,8 @@
 #include <thread>
 #include <switch.h>
 #include <sstream>
+#include <algorithm>
+#include <iterator>
 
 #include <cpp_redis/cpp_redis>
 #include "mod_event_redis.hpp"
@@ -50,11 +52,24 @@ namespace mod_event_redis {
         return os.str();
     }
 
+    std::vector<std::string> split(const std::string& s, char delimiter)
+    {
+       std::vector<std::string> tokens;
+       std::string token;
+       std::istringstream tokenStream(s);
+       while (std::getline(tokenStream, token, delimiter)) {
+          tokens.push_back(token);
+       }
+       return tokens;
+    }
+
     static switch_xml_config_item_t instructions[] = {
         SWITCH_CONFIG_ITEM("hostname", SWITCH_CONFIG_STRING, CONFIG_RELOADABLE, &globals.hostname,
                             "localhost", NULL, "hostname", "Redis Master hostname"),
         SWITCH_CONFIG_ITEM("port", SWITCH_CONFIG_INT, CONFIG_RELOADABLE, &globals.port,
                             6379, NULL, "hosts", "Redis Port"),
+        SWITCH_CONFIG_ITEM("master", SWITCH_CONFIG_STRING, CONFIG_RELOADABLE, &globals.master,
+                            NULL, NULL, "master", "Redis Sentinal Master Name"),
         SWITCH_CONFIG_ITEM("sentinals", SWITCH_CONFIG_STRING, CONFIG_RELOADABLE, &globals.sentinals,
                             "localhost:xxxx", NULL, "hostname", "Redis Sentinals"),
         SWITCH_CONFIG_ITEM("topic-prefix", SWITCH_CONFIG_STRING, CONFIG_RELOADABLE, &globals.topic_prefix,
@@ -108,10 +123,10 @@ namespace mod_event_redis {
             cpp_redis::active_logger = std::unique_ptr<cpp_redis_fs_logger>(new cpp_redis_fs_logger);
 
             topic_str = std::string(globals.topic_prefix) + "_" + std::string(switch_core_get_switchname());
-            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "KafkaEventPublisher Topic : %s", topic_str.c_str());
+            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "RedisEventPublisher Topic : %s", topic_str.c_str());
 
             try {
-                redisClient.connect(globals.hostname, globals.port, [this](const std::string& host, std::size_t port, cpp_redis::client::connect_state status) {
+                auto connect_callback = [this](const std::string& host, std::size_t port, cpp_redis::client::connect_state status) {
                     if (status == cpp_redis::client::connect_state::ok) {
                         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "client connection ok to %s:%zu  \n", host.c_str(), port);
                         _initialized = 1;
@@ -119,7 +134,18 @@ namespace mod_event_redis {
                         switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "client disconnected from %s:%zu  \n", host.c_str(), port);
                         _initialized = 0;
                     }
-                }, 0, -1, 5000);
+                };
+                //Todo sentinal
+                if(globals.master == NULL){
+                    redisClient.connect(globals.hostname, globals.port, connect_callback , 0, -1, 5000);
+                } else {
+                    cpp_redis::network::set_default_nb_workers(2);
+                    std::vector<std::string> sentinals = split(std::string(globals.sentinals), ',');
+                    for(std::string const& value: sentinals) {
+                        redisClient.add_sentinel(value, globals.port);
+                    }
+                    redisClient.connect(globals.master,connect_callback , 0, -1, 5000);
+                }
                 _initialized = 1;
             } catch (...) {
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Redis Connection Initial Connect Failed  \n");
@@ -152,16 +178,7 @@ namespace mod_event_redis {
 
         private:
 
-        std::vector<std::string> split(const std::string& s, char delimiter)
-        {
-           std::vector<std::string> tokens;
-           std::string token;
-           std::istringstream tokenStream(s);
-           while (std::getline(tokenStream, token, delimiter)) {
-              tokens.push_back(token);
-           }
-           return tokens;
-        }
+        
 
         int send(const std::string data){
 

@@ -7,6 +7,7 @@ namespace mod_event_redis {
 	static struct {
 		char *hostname;
 		int port;
+		char *master;
 		char *sentinals;
 		char *topic_prefix;
 	} globals;
