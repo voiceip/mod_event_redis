@@ -1,0 +1,22 @@
+// See https://aka.ms/vscode-remote/devcontainer.json for format details.
+{
+	"name": "mod_event_redis",
+	"dockerFile": "Dockerfile",
+	"runArgs": [
+		"--cap-add=SYS_PTRACE",
+		"--security-opt", "seccomp=unconfined"
+	],
+
+	// "appPort": [],
+
+	"settings":  { 
+	 	"terminal.integrated.shell.linux": "/bin/bash"
+	},
+
+	//"postCreateCommand": "make",
+
+	"extensions": [
+		"ms-vscode.cpptools",
+		"austin.code-gnu-global",
+	]
+}

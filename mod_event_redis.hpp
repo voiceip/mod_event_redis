@@ -8,6 +8,7 @@ namespace mod_event_redis {
 		char *hostname;
 		int port;
 		char *master;
+		char *password;
 		char *sentinals;
 		char *topic_prefix;
 	} globals;

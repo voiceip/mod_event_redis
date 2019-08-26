@@ -3,6 +3,6 @@ Version: 1._VERSION_
 Architecture: all
 Section: base
 Priority: standard
-Depends: cpp-redis, freeswitch
+Depends: freeswitch (>= 1.8)
 Maintainer: Kinshuk Bairagi <me@kinshuk.in>
 Description: Publish FreeSwitch Event to Redis Queue

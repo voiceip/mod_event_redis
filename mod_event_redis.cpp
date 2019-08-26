@@ -70,6 +70,8 @@ namespace mod_event_redis {
                             6379, NULL, "hosts", "Redis Port"),
         SWITCH_CONFIG_ITEM("master", SWITCH_CONFIG_STRING, CONFIG_RELOADABLE, &globals.master,
                             NULL, NULL, "master", "Redis Sentinal Master Name"),
+        SWITCH_CONFIG_ITEM("password", SWITCH_CONFIG_STRING, CONFIG_RELOADABLE, &globals.password,
+                            "", NULL, "", "Redis Password"),
         SWITCH_CONFIG_ITEM("sentinals", SWITCH_CONFIG_STRING, CONFIG_RELOADABLE, &globals.sentinals,
                             "localhost:xxxx", NULL, "hostname", "Redis Sentinals"),
         SWITCH_CONFIG_ITEM("topic-prefix", SWITCH_CONFIG_STRING, CONFIG_RELOADABLE, &globals.topic_prefix,
@@ -146,6 +148,18 @@ namespace mod_event_redis {
                     }
                     redisClient.connect(globals.master,connect_callback , 0, -1, 5000);
                 }
+
+                if (globals.password != NULL){
+                    //! authentication if server-server requires it
+                    redisClient.auth(globals.password, [](const cpp_redis::reply& reply) {
+                        if (reply.is_error()) { 
+                            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Redis Connection Authentication failed - Pass(%s) - Error: %s \n", globals.password, reply.as_string().c_str());
+                        } else {
+                            switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_INFO, "Redis Connection Successful authentication \n");
+                        }
+                    });
+                }
+
                 _initialized = 1;
             } catch (...) {
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Redis Connection Initial Connect Failed  \n");
@@ -165,6 +179,8 @@ namespace mod_event_redis {
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "PublishEvent without active RedisConnection \n");
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_WARNING, "%s\n", event_json );
             }
+            //delete uuid;
+            delete event_json;
         }
 
         void Shutdown(){
@@ -257,7 +273,7 @@ namespace mod_event_redis {
     //*****************************//
     //           GLOBALS           //
     //*****************************//
-    std::auto_ptr<RedisEventModule> module;
+    std::unique_ptr<RedisEventModule> module;
 
 
     //*****************************//
@@ -283,8 +299,7 @@ namespace mod_event_redis {
                 switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Error shutting down Redis Event module: %s\n",
                                   ex.what());
             } catch(...) { // Exceptions must not propogate to C caller
-                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR,
-                                  "Unknown error shutting down Redis Event module\n");
+                switch_log_printf(SWITCH_CHANNEL_LOG, SWITCH_LOG_ERROR, "Unknown error shutting down Redis Event module\n");
             }
             return SWITCH_STATUS_SUCCESS;
     }

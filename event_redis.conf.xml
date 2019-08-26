@@ -6,6 +6,6 @@
 		<!-- <has-elements> -->
 		<param name="master" value="mymaster" />
 		<param name="sentinels" value=""/>
-		<param name="topic-prefix" value="redis-queue"/>
+		<param name="topic-prefix" value="fs_redis_queue"/>
 	</settings>
  </configuration>
