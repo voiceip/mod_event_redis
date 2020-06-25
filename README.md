@@ -1,6 +1,9 @@
 # mod_event_redis
 Freeswitch Redis Events Plugin
 
+![Build Status](https://travis-ci.com/voiceip/mod_event_redis.svg?branch=master)
+
+
 ### Build
 
 ```
